@@ -2,7 +2,7 @@
 """
 Created on Thu Oct  7 14:50:23 2021
 
-@author: OSman VARIŞLI
+@author: Osman VARIŞLI
 oldu bu oldu
 """
 
