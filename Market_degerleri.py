@@ -2,7 +2,7 @@
 """
 Created on Thu Oct  7 19:43:08 2021
 
-@author: OSman VARIŞLI
+@author: Osman VARIŞLI
 
 her coinin marketlerini çekiyor.
 """
