@@ -2,7 +2,7 @@
 """
 Created on Sat Oct  9 11:22:36 2021
 
-@author: PC
+@author: Osman VARIŞLI
 """
 import requests
 import pandas as pd 
