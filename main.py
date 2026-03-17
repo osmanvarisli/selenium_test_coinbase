@@ -1,72 +1,57 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Oct  9 11:22:36 2021
+import pandas as pd
 
-@author: Osman VARIŞLI
-"""
-import requests
-import pandas as pd 
-from selenium import webdriver
-import time
-
-def sorgula(market_df,ddff,olmamali=[],olmali_x=[]):
+def sorgula(market_df, main_df, exclude_market=None, include_market=None):
     """
-    print('osman')
-    d_m_olmali=market_df[market_df.Market == olmali_x]
-    print(d_m_olmali)
-    print('osman')
-    print('osman')
-    print('osman')
-    print('osman')
+    Filters the main dataframe based on market presence.
     """
-    d_m=market_df[market_df.Market == olmamali]
-    print(d_m)
-    d_m=d_m.drop(['Market'], axis=1)
-    return_df=ddff
-    return_df=return_df.reset_index()
-    for index,row in d_m.iterrows():
-        return_df=return_df[return_df.Coin != row['Coin']]
-    return return_df
+    temp_df = main_df.copy().reset_index()
     
-    """
-    for index, row in ddff['coin'].iterrows(): 
-        if row not in d_m:
-    """        
-                
-df= pd.read_csv('Market_degerleri.csv')
-df=df.set_index('Unnamed: 0')
-df3=df.groupby(['Coin','Total_Supply']).count()
-df3=df3.sort_values(by='Market', ascending=False)
+    # 1. Get list of coins that ARE on the excluded market
+    if exclude_market:
+        coins_to_exclude = market_df[market_df['Market'] == exclude_market]['Coin'].unique()
+        temp_df = temp_df[~temp_df['Coin'].isin(coins_to_exclude)]
+        
+    # 2. Get list of coins that ARE on the required market
+    if include_market:
+        coins_to_include = market_df[market_df['Market'] == include_market]['Coin'].unique()
+        temp_df = temp_df[temp_df['Coin'].isin(coins_to_include)]
+        
+    return temp_df
 
-print(df3.sort_values(by='Total_Supply', ascending=True))
+# --- Data Loading ---
+# Using index_col=0 replaces the .set_index('Unnamed: 0') line
+df = pd.read_csv('Market_degerleri.csv', index_col=0)
+df2 = pd.read_csv('sss.csv', index_col='No')
 
-df2= pd.read_csv('sss.csv')
+# --- Market Analysis ---
+df3 = df.groupby(['Coin', 'Total_Supply']).count()
+df3 = df3.sort_values(by='Market', ascending=False)
 
+# --- Pricing & Supply Filters ---
+df2['Price'] = pd.to_numeric(df2['Price'], errors='coerce')
+df2 = df2[df2['Circulating Supply'] < 50_000_000]
 
+# Calculate Market Cap (s)
+df2['s'] = df2['Price'] * df2['Circulating Supply']
+df2 = df2.sort_values(by='s', ascending=False)
 
-df2=df2.set_index('No')
-df2['Price'] = df2['Price'].astype(float)
-#df2=df2[df2['Price']<1]
-df2=df2[df2['Circulating Supply']<50000000]
-#df2=df2[df2['Price']>0.005]
-df2['s']=df2['Price']*df2['Circulating Supply']
-df2=df2.sort_values(by='s', ascending=False)
+# --- Merging & Final Filtering ---
+# Joining market counts with price data
+ddff = df3.join(df2.set_index('Name'), on='Coin')
 
+# Criteria
+ddff = ddff[
+    (ddff.Market > 20) & 
+    (ddff.Price < 15) & 
+    (ddff.Price > 0.005)
+]
 
+# --- Market Specific Filtering ---
+# Example: Find coins NOT on Binance but meet all other criteria
+exclude = ''         # Set to 'Binance' to hide Binance coins
+include = 'Binance'  # Set to 'Binance' to only show Binance coins
 
-ddff=df3.join(df2.set_index('Name'), on='Coin')
-ddff=ddff[ddff.Market>20]
-ddff=ddff[ddff.Price<15]
-ddff=ddff[ddff.Price>0.005]
-#ddff=ddff[ddff['Circulating Supply']<50000000]
-ddff=ddff.sort_values(by='s', ascending=True)
-print(ddff.columns)
-olmamali='Binance'#market isimleri
-olmamali=''
-olmali_x='Binance'
+final_results = sorgula(df, ddff, exclude_market=exclude, include_market=include)
 
-ddff=sorgula(df,ddff,olmamali,olmali_x)
-
-
-#print(ddff.head(30))
-print(ddff[['Symbol','Market', 'Price', 'Circulating Supply', 's']].head(50))
+# --- Output ---
+print(final_results[['Coin', 'Symbol', 'Market', 'Price', 'Circulating Supply', 's']].head(50))
